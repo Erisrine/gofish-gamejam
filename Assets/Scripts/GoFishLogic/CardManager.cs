@@ -70,10 +70,9 @@ public class CardManager : MonoBehaviour
 	{
 		string cardName = rank + "-" + seed + "8";
 			
-		Debug.Log("Getting sprite for card: " + cardName);
 		if(cardSprites.ContainsKey(cardName))
 		{
-			Debug.LogError("Getting sprite for card: " + cardName);
+			Debug.Log("Getting sprite for card: " + cardName);
 			return cardSprites[cardName];
 		}
 		else
