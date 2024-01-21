@@ -1,3 +1,4 @@
+using AK.Wwise;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Burst.CompilerServices;
@@ -26,7 +27,7 @@ public class GameController : MonoBehaviour
         DrawCard(opponentHand, 5);
     }
 
-    void InitializeDeck()
+    public void InitializeDeck()
     {
         for (int i = 0; i < sprites.Length; i++)
         {
@@ -35,7 +36,7 @@ public class GameController : MonoBehaviour
         ShuffleDeck(150);
     }
 
-    void ShuffleDeck(int shuffleTimes)
+    public void ShuffleDeck(int shuffleTimes)
     {
         if(deck.Count > 1)
         {
@@ -56,51 +57,75 @@ public class GameController : MonoBehaviour
         }
     }
 
-    void DrawCard(Hand hand, int count)
+    public void DrawCard(Hand hand, int count)
     {
         for (int i = 0; i < count; i++)
         {
             hand.cards.Add(deck[0]);
 
+            hand.ranks[RankToInt(GetRank(deck[0]))]++;
             InstantiateCard(deck[0], hand);
 
             deck.RemoveAt(0);
         }
     }
+    public void DrawCard(Hand hand, string cardName)
+    {
+        if (deck.Contains(cardName))
+        {
+            hand.cards.Add(cardName);
+            hand.ranks[RankToInt(GetRank(cardName))]++;
+            InstantiateCard(cardName, hand);
+            deck.Remove(cardName);
+        }
+    }
 
-    void RequestCard()
+    public void RequestCard()
     {
         if (playerTurn)
         {
             bool hit = false;
             GameObject button = EventSystem.current.currentSelectedGameObject;
             string rank = GetRank(button.name);
-
+            Debug.Log("Player asked for " + rank);
             for (int i = 0; i < opponentHand.cards.Count; i++)
             {
                 if (GetRank(opponentHand.cards[i]) == rank)
                 {
+                    Debug.Log("Player got it!");
                     hit = true;
-                    playerHand.cards.Add(opponentHand.cards[i]);
-                    DeInstantiateCard(opponentHand.cards[i]);
-                    InstantiateCard(opponentHand.cards[i], playerHand);
+                    string card = opponentHand.cards[i];
+                    playerHand.cards.Add(card);
+                    DeInstantiateCard(card);
                     opponentHand.cards.RemoveAt(i);
+                    opponentHand.ranks[RankToInt(GetRank(card))]--;
+                    playerHand.ranks[RankToInt(GetRank(card))]++;
+                    InstantiateCard(card, playerHand);
+                    i--;
                 }
             }
             if (hit == false)
             {
+                Debug.Log("Player goes fishing!");
+                string topCard = deck[0];
+                Debug.Log("Player drew " + playerHand.cards[playerHand.cards.Count - 1]);
                 DrawCard(playerHand, 1);
-                playerTurn = false;
+                if (GetRank(playerHand.cards[playerHand.cards.Count - 1]) == GetRank(topCard) && GetRank(playerHand.cards[playerHand.cards.Count - 1]) != rank)
+                {
+                    playerTurn = false;
+                }
+                else
+                    Debug.Log("Player Catch!");
             }
         }
     }
 
-    string GetRank(string card)
+    public string GetRank(string card)
     {
         return card.Substring(0, card.LastIndexOf('-'));
     }
 
-    void InstantiateCard(string cardToInst, Hand hand)
+    public void InstantiateCard(string cardToInst, Hand hand)
     {
         GameObject card = Instantiate(hand.cardPrefab, hand.handGroup);
         if(card.GetComponentInChildren<Text>() != null)
@@ -108,18 +133,40 @@ public class GameController : MonoBehaviour
         card.name = cardToInst;
         if(card.GetComponent<Button>() != null)
             card.GetComponent<Button>().onClick.AddListener(RequestCard);
-
         Check4(hand);
     }
 
-    void DeInstantiateCard(string cardToDeinst)
+    public void DeInstantiateCard(string cardToDeinst)
     {
         Destroy(GameObject.Find(cardToDeinst));
     }
 
-    void Check4(Hand hand)
+    public void Check4(Hand hand)
     {
-        Dictionary<string, int> ranks = new Dictionary<string, int>();
+        for (int i = 0; i < hand.ranks.Length; i++)
+        {
+            if (hand.ranks[i] == 4)
+            {
+                for (int t = 0; t < hand.cards.Count; t++)
+                {
+                    if (RankToInt(GetRank(hand.cards[t])) == i)
+                    {
+                        Debug.Log("Score " + hand.cards[t]);
+                        hand.cards.RemoveAt(t);
+                        hand.score++;
+                        t--;
+                    }
+                }
+                for (int t = 0; t < hand.handGroup.childCount; t++)
+                {
+                    if (RankToInt(GetRank(hand.handGroup.GetChild(t).name)) == i)
+                    {
+                        Destroy(hand.handGroup.GetChild(t).gameObject);
+                    }
+                }
+            }
+        }
+        /*Dictionary<string, int> ranks = new Dictionary<string, int>();
 
         for (int i = 0; i < hand.cards.Count; i++)
         {
@@ -137,10 +184,9 @@ public class GameController : MonoBehaviour
             {
                 for (int i = 0; i < hand.cards.Count; i++)
                 {
-                    Debug.Log(hand.cards[i]);
                     if (GetRank(hand.cards[i]) == pair.Key)
                     {
-                        Debug.Log(hand.cards[i] + "*");
+                        Debug.Log(hand.cards[i] + "Removed");
                         DeInstantiateCard(hand.cards[i]);
                         hand.cards.RemoveAt(i);
                         hand.score++;
@@ -148,10 +194,10 @@ public class GameController : MonoBehaviour
                     }
                 }
             }
-        }
+        }*/
     }
 
-    void OpponentTurnLevel1()
+    public void OpponentTurnLevel1()
     {
         bool hit = false;
         int rndCardId = Random.Range(0, opponentHand.cards.Count);
@@ -163,21 +209,80 @@ public class GameController : MonoBehaviour
                 hit = true;
                 opponentHand.cards.Add(playerHand.cards[i]);
                 DeInstantiateCard(playerHand.cards[i]);
+                playerHand.ranks[RankToInt(GetRank(playerHand.cards[i]))]--;
+                opponentHand.ranks[RankToInt(GetRank(playerHand.cards[i]))]++;
                 InstantiateCard(playerHand.cards[i], opponentHand);
                 playerHand.cards.RemoveAt(i);
                 Debug.Log("Opponent got it!");
+                i--;
             }
         }
         if(hit == false)
         {
-            DrawCard(opponentHand, 1);
-            playerTurn = true;
             Debug.Log("Opponent goes fishing!");
+            DrawCard(opponentHand, 1);
+            Debug.Log("Opponent Drew " + opponentHand.cards[opponentHand.cards.Count-1]);
+            string topCard = deck[0];
+            if (GetRank(opponentHand.cards[opponentHand.cards.Count - 1]) == GetRank(topCard) && GetRank(opponentHand.cards[opponentHand.cards.Count - 1]) != GetRank(opponentHand.cards[rndCardId]))
+                playerTurn = true;
+            else
+            {
+                Debug.Log("Opponent Catch");
+                OpponentTurnLevel1();
+            }
         }
         else
         {
             OpponentTurnLevel1();
         }
+    }
+
+    int RankToInt(string rank)
+    {
+        int returnValue = 0;
+        switch(rank)
+        {
+            case "2":
+                returnValue = 0;
+                break;
+            case "3":
+                returnValue = 1;
+                break;
+            case "4":
+                returnValue = 2;
+                break;
+            case "5":
+                returnValue = 3;
+                break;
+            case "6":
+                returnValue = 4;
+                break;
+            case "7":
+                returnValue = 5;
+                break;
+            case "8":
+                returnValue = 6;
+                break;
+            case "9":
+                returnValue = 7;
+                break;
+            case "10":
+                returnValue = 8;
+                break;
+            case "Jack":
+                returnValue = 9;
+                break;
+            case "Queen":
+                returnValue = 10;
+                break;
+            case "King":
+                returnValue = 11;
+                break;
+            case "Ace":
+                returnValue = 12;
+                break;
+        }
+        return returnValue;
     }
 
     void Update()
