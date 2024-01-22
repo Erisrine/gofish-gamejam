@@ -21,7 +21,7 @@ public class GameManager : MonoBehaviour
 		// Initialize the CardManager directly
 		
 		cardManager.InitializeDictionary();
-		Debug.LogWarning("Manager Start()");
+		Debug.Log("Manager Start()");
 		//deck = GetComponent<Deck>();
 		//player = GetComponent<Player>();
 		//opponent = GetComponent<Player>();
@@ -33,21 +33,24 @@ public class GameManager : MonoBehaviour
 	
 	void StartGame()
 	{
-		Debug.LogWarning("StartGame()");
+		Debug.Log("StartGame()");
 		 // Deal initial cards to players
 		for (int i = 0; i < 5; i++)
 		{
 			DrawNewCard();
 			opponent.AddToHand(deck.DrawCard()); //make better
 		}
-		
-		isPlayerTurn = true;
+		for (int i = 0; i < opponent.hand.Count; i++)
+        {
+			Debug.Log(opponent.hand[i].rank);
+        }
+
 		StartPlayerTurn();
 	}
 	
 	public void StartPlayerTurn()
 	{
-		isPlayerTurn = false;
+		isPlayerTurn = true;
 		
 	}
 	
@@ -55,17 +58,16 @@ public class GameManager : MonoBehaviour
 	{
 		// Implement opponent turn logic (AI decision-making, asking player for cards, etc.)
 		// After the opponent's turn, switch to the player's turn
-		isPlayerTurn = true;
 		StartPlayerTurn();
 	}
 	
 	public void DrawNewCard()
 	{
-		Debug.LogWarning("DrawNewCard()");
+		Debug.Log("DrawNewCard()");
 		Card drawnCard = DrawCard();
-		Debug.LogWarning("Card Drawn");
+		Debug.Log("Card Drawn");
 		player.AddToHand(drawnCard);
-		Debug.LogWarning("Card Added to Player Hands");
+		Debug.Log("Card Added to Player Hands");
 		
 		
 		if (drawnCard != null)
@@ -137,7 +139,7 @@ public class GameManager : MonoBehaviour
 			if (Physics.Raycast(ray, out hit))
 			{
 				// Check if the hit object is a card in the player's hand
-				Card clickedCard = hit.collider.GetComponent<Card>();
+				Card clickedCard = hit.collider.GetComponent<CardMonoBehaviour>().CardData;
 				if (clickedCard != null && player.hand.Contains(clickedCard))
 				{
 					// Perform actions based on the clicked card
@@ -151,9 +153,10 @@ public class GameManager : MonoBehaviour
 	{
 		// Implement logic for asking the opponent for cards based on the selected card
 		string requestedRank = selectedCard.rank;
+        Debug.Log("Asking opponent for a card: " + requestedRank);
 
-		// Check if the opponent has cards of the requested rank
-		List<Card> opponentCards = opponent.hand.FindAll(card => card.rank == requestedRank);
+        // Check if the opponent has cards of the requested rank
+        List<Card> opponentCards = opponent.hand.FindAll(card => card.rank == requestedRank);
 
 		if (opponentCards.Count > 0)
 		{
@@ -174,17 +177,18 @@ public class GameManager : MonoBehaviour
 		}
 		else
 		{
+			DrawNewCard();
 			// Go Fish: Draw a card from the deck
-			Card drawnCard = deck.DrawCard();
-			player.AddToHand(drawnCard);
+			//Card drawnCard = deck.DrawCard();
+			//player.AddToHand(drawnCard);
 
 			// Implement UI or other feedback for "Go Fish"
 
 			// Check for pairs in the player's hand after drawing a card
-			player.CheckForPairs();
+			//player.CheckForPairs();
 
 			// Switch to the opponent's turn
-			isPlayerTurn = false;
+			//isPlayerTurn = false;
 			StartOpponentTurn();
 		}
 		
